@@ -146,7 +146,9 @@ for k in range(10):
 	child_ind = Permutation(child_permute, calculate_distance(child_permute))
 	child.append(child_ind)
 	print(child_ind.dist)
-	population = child
+	population.clear()
+	for i in child:
+		population.append(i)
 
 ts1 = tournament_selection()
 ts2 = tournament_selection()
