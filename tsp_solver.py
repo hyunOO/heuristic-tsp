@@ -82,8 +82,19 @@ def longest_common(list1, list2):
 					else:
 						break
 				if len(sub_lcs) > len(lcs):
-					lcs = sub_lcs
+					lcs.clear()
+					for elem in sub_lcs:
+						lcs.append(elem)
 	return lcs
+
+def elitism(list1, list2):
+	result = []
+	for i in list1:
+		result.append(i)
+	for i in list2:
+		result.append(i)
+	result.sort(key = lambda x: x.dist)
+	return result[20: ]
 
 # diff function returns a list who is in list 1 but not in list2
 def diff(list1, list2):
@@ -93,41 +104,43 @@ def diff(list1, list2):
 # crossover function proceeds crossover between two individuals and returns a new child
 def crossover(ind1, ind2):
 	global node
-	count = node
-	remain_ind1 = ind1
-	remain_ind2 = ind2
-	common_lists = []
-	reject_now = False
+
+	rand1 = random.randint(0, len(ind1))
+	rand2 = random.randint(0, len(ind2))
+
+	index1 = np.minimum(rand1, rand2)
+	index2 = np.maximum(rand1, rand2)
+
+	remain_ind1 = ind1[index1 : index2 + 1]
+	remain_ind2 = diff(ind2, remain_ind1)
+
+	answer = []
+	for i in range(node):
+		if i < index1:
+			answer.append(remain_ind2[i])
+		elif i > index2:
+			answer.append(remain_ind2[i - index2 + index1 - 1])
+		else:
+			answer.append(remain_ind1[i - index1])
+	return answer
 	
-	while count > 0:
-		ext_ind1 = []
-		ext_ind2 = []
-		for i in range(2):
-			for j in range(count):
-				ext_ind1.append(remain_ind1[j])
-		for i in range(2):
-			for j in range(count):
-				ext_ind2.append(remain_ind2[j])
-		lcs = list(set(longest_common(ext_ind1, ext_ind2)))
-		len_lcs = len(lcs)
-		if len_lcs == 0 and not reject_now:
-			reject_now = True
-			remain_ind2 = remain_ind2.reverse()
-			continue
-		if len_lcs == 0 and reject_now:
-			break
-		common_lists.append(lcs)
-		remain_ind1 = diff(remain_ind1, lcs)
-		remain_ind2 = diff(remain_ind2, lcs)
-		count -= len_lcs
-	if remain_ind1 != []:
-		common_lists.append(remain_ind1)
-	#random.shuffle(common_lists)	
-	result = []
-	for i in common_lists:
-		for j in i:
-			result.append(j)
-	return result
+	#ext_ind1 = []
+	#ext_ind2 = []
+	#for i in range(2):
+	#	for j in range(node):
+	#		ext_ind1.append(remain_ind1[j])
+	#for i in range(2):
+	#	for j in range(node):
+	#		ext_ind2.append(remain_ind2[j])
+	#lcs = list(set(longest_common(ext_ind1, ext_ind2)))
+	#remain_ind1 = diff(remain_ind1, lcs)
+	#remain_ind2 = diff(remain_ind2, lcs)
+	#result = []
+	#for i in lcs:
+	#	result.append(i)
+	#for i in remain_ind1:
+	#	result.append(i)
+	#return result
 
 population = []
 child = []
@@ -135,7 +148,7 @@ for i in range(20):
 	ts = tournament_selection()
 	population.append(ts)
 	print(ts.dist)
-for k in range(10):
+for k in range(100):
 	print("hello")
 	for i in range(19):
 		child_permute = crossover(population[i].permute, population[i + 1].permute)
@@ -146,16 +159,5 @@ for k in range(10):
 	child_ind = Permutation(child_permute, calculate_distance(child_permute))
 	child.append(child_ind)
 	print(child_ind.dist)
-	population.clear()
-	for i in child:
-		population.append(i)
+	population = elitism(population, child)
 
-ts1 = tournament_selection()
-ts2 = tournament_selection()
-print(ts1.permute)
-print(ts2.permute)
-print(ts1.dist)
-print(ts2.dist)
-child = crossover(ts1.permute, ts2.permute)
-print(child)
-print(calculate_distance(child))
