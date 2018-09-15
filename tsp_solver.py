@@ -71,6 +71,7 @@ def tournament_selection():
 # longest_common function returns the longest common consecutive sequences between two lists
 def longest_common(list1, list2):
 	lcs = []
+	index = 0
 	for i in range(len(list1)):
 		for j in range(len(list2)):
 			if list1[i] == list2[j]:
@@ -82,10 +83,11 @@ def longest_common(list1, list2):
 					else:
 						break
 				if len(sub_lcs) > len(lcs):
+					index = i
 					lcs.clear()
 					for elem in sub_lcs:
 						lcs.append(elem)
-	return lcs
+	return (lcs, index)
 
 def elitism(list1, list2):
 	result = []
@@ -105,50 +107,33 @@ def diff(list1, list2):
 def crossover(ind1, ind2):
 	global node
 
-	rand1 = random.randint(0, len(ind1))
-	rand2 = random.randint(0, len(ind2))
+	lcs, start_index = longest_common(ind1, ind2)
+	end_index = start_index + len(lcs) - 1	
 
-	index1 = np.minimum(rand1, rand2)
-	index2 = np.maximum(rand1, rand2)
-
-	remain_ind1 = ind1[index1 : index2 + 1]
-	remain_ind2 = diff(ind2, remain_ind1)
+	rand1 = 0
+	if start_index != 0:
+		rand1 = random.randint(0, start_index)
+	else:
+		rand1 = random.randint(end_index + 1, len(ind1))
+	rand2 = random.randint(np.maximum(rand1, end_index), len(ind1))
 
 	answer = []
 	for i in range(node):
-		if i < index1:
-			answer.append(remain_ind2[i])
-		elif i > index2:
-			answer.append(remain_ind2[i - index2 + index1 - 1])
+		if start_index <= i and i <= end_index:
+			answer.append(ind1[i])
+		elif rand1 <= i and i <= rand2:
+			answer.append(ind1[i])
 		else:
-			answer.append(remain_ind1[i - index1])
+			answer.append(ind2[i])
 	return answer
 	
-	#ext_ind1 = []
-	#ext_ind2 = []
-	#for i in range(2):
-	#	for j in range(node):
-	#		ext_ind1.append(remain_ind1[j])
-	#for i in range(2):
-	#	for j in range(node):
-	#		ext_ind2.append(remain_ind2[j])
-	#lcs = list(set(longest_common(ext_ind1, ext_ind2)))
-	#remain_ind1 = diff(remain_ind1, lcs)
-	#remain_ind2 = diff(remain_ind2, lcs)
-	#result = []
-	#for i in lcs:
-	#	result.append(i)
-	#for i in remain_ind1:
-	#	result.append(i)
-	#return result
-
 population = []
 child = []
 for i in range(20):
 	ts = tournament_selection()
 	population.append(ts)
 	print(ts.dist)
-for k in range(100):
+for k in range(200):
 	print("hello")
 	for i in range(19):
 		child_permute = crossover(population[i].permute, population[i + 1].permute)
