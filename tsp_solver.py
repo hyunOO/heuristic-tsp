@@ -1,5 +1,6 @@
 import sys
 import numpy as np
+import random
 
 # x is a list which contains the values of x coordinates
 x = []
@@ -32,9 +33,19 @@ while True:
 				pass
 			count += 1
 
-def random_permutation(node):
-	return np.random.permutation(node)
+class Permutation:
+	def __init__(self, permute, dist):
+		self.permute = permute
+		self.dist = dist
 
+# random_permutation function returns a randomly generated permutation from 1 to integer value node
+def random_permutation(node):
+	x = [i for i in range(node)]
+	random.shuffle(x)
+	return x
+
+# calcuate_distance function takes a role of fitness function
+# However, I will use this function for comparing among individuals
 def calculate_distance(node_list):
 	dist = 0
 	for i in range(len(node_list) - 1):
@@ -42,6 +53,7 @@ def calculate_distance(node_list):
 	dist += np.square(x[node_list[len(node_list) - 1]] - x[node_list[0]]) + np.square(y[node_list[len(node_list) - 1]] - y[node_list[0]])
 	return dist
 
+# tournament_selection function proceeds tournament selection among 20 individuals
 def tournament_selection():
 	global node
 	ran_individual = []
@@ -54,59 +66,94 @@ def tournament_selection():
 		if new_dist < dist:
 			dist = new_dist
 			index = i + 1
-	return dist
+	return Permutation(ran_individual[index], dist)
 
+# longest_common function returns the longest common consecutive sequences between two lists
 def longest_common(list1, list2):
-	lcs = [[0 for j in range(len(list1) + 1)] for i in range(len(list2) + 1)]
-	for i in range(len(list1) + 1):
-		lcs[i][0] = 0
-	for j in range(len(list2) + 1):
-		lcs[0][j] = 1
+	lcs = []
 	for i in range(len(list1)):
 		for j in range(len(list2)):
 			if list1[i] == list2[j]:
-				lcs[i + 1][j + 1] = lcs[i][j] + 1
-			else:
-				lcs[i + 1][j + 1] = np.maximum(lcs[i + 1][j], lcs[i][j + 1])
+				sub_lcs = []
+				iteration_no = np.minimum(len(list1) - i, len(list2) - j)
+				for k in range(iteration_no):
+					if list1[i + k] == list2[j + k]:
+						sub_lcs.append(list1[i + k])
+					else:
+						break
+				if len(sub_lcs) > len(lcs):
+					lcs = sub_lcs
 	return lcs
 
-def backtrack(list1, list2, i, j):
-	lcs = longest_common(list1, list2)
-	if i == -1 or j == -1:
-		return []
-	if list1[i] == list2[j]:
-		result = []
-		mid = backtrack(list1, list2, i - 1, j - 1)
-		if mid is not None:
-			for k in range(len(mid)):
-				result.append(mid[k])
-		result.append(list1[i])
-		return result
-	mid = []
-	if lcs[i + 1][j] >= lcs[i][j + 1]:
-		mid = list(set().union(mid, backtrack(list1, list2, i, j - 1)))
-	if lcs[i][j + 1] >= lcs[i + 1][j]:
-		mid = list(set().union(mid, backtrack(list1, list2, i - 1, j)))
-	return mid
-
+# diff function returns a list who is in list 1 but not in list2
 def diff(list1, list2):
 	set2 = set(list2)
 	return [i for i in list1 if i not in list2]
 
+# crossover function proceeds crossover between two individuals and returns a new child
 def crossover(ind1, ind2):
 	global node
-	ext_ind1 = []
-	for i in range(2):
-		for j in range(count):
-			ext_ind1.append(ind1[j])
-	ext_ind2 = []
-	for i in range(2):
-		for j in range(count):
-			ext_ind2.append(ind2[j])
-	if longest_common(ext_ind1, ext_ind2) == 0:
-		break
-	longest = backtrack(ext_ind1, ext_ind2, 2 * node - 1, 2 * node - 1)
+	count = node
+	remain_ind1 = ind1
+	remain_ind2 = ind2
+	common_lists = []
+	reject_now = False
+	
+	while count > 0:
+		ext_ind1 = []
+		ext_ind2 = []
+		for i in range(2):
+			for j in range(count):
+				ext_ind1.append(remain_ind1[j])
+		for i in range(2):
+			for j in range(count):
+				ext_ind2.append(remain_ind2[j])
+		lcs = list(set(longest_common(ext_ind1, ext_ind2)))
+		len_lcs = len(lcs)
+		if len_lcs == 0 and not reject_now:
+			reject_now = True
+			remain_ind2 = remain_ind2.reverse()
+			continue
+		if len_lcs == 0 and reject_now:
+			break
+		common_lists.append(lcs)
+		remain_ind1 = diff(remain_ind1, lcs)
+		remain_ind2 = diff(remain_ind2, lcs)
+		count -= len_lcs
+	if remain_ind1 != []:
+		common_lists.append(remain_ind1)
+	#random.shuffle(common_lists)	
+	result = []
+	for i in common_lists:
+		for j in i:
+			result.append(j)
+	return result
 
-print(longest_common([1, 2, 3, 5], [3, 5, 6, 7]))
-print(backtrack([1, 2, 3, 9, 11], [0, 2, 3, 6, 7], 4, 4))
-print(diff([1, 2, 3, 4, 5], [4, 5]))
+population = []
+child = []
+for i in range(20):
+	ts = tournament_selection()
+	population.append(ts)
+	print(ts.dist)
+for k in range(10):
+	print("hello")
+	for i in range(19):
+		child_permute = crossover(population[i].permute, population[i + 1].permute)
+		child_ind = Permutation(child_permute, calculate_distance(child_permute))
+		child.append(child_ind)
+		print(child_ind.dist)
+	child_permute = crossover(population[0].permute, population[19].permute)
+	child_ind = Permutation(child_permute, calculate_distance(child_permute))
+	child.append(child_ind)
+	print(child_ind.dist)
+	population = child
+
+ts1 = tournament_selection()
+ts2 = tournament_selection()
+print(ts1.permute)
+print(ts2.permute)
+print(ts1.dist)
+print(ts2.dist)
+child = crossover(ts1.permute, ts2.permute)
+print(child)
+print(calculate_distance(child))
