@@ -1,6 +1,6 @@
 import sys
-import numpy as np
 import random
+import math
 
 # x is a list which contains the values of x coordinates
 x = []
@@ -49,8 +49,8 @@ def random_permutation(node):
 def calculate_distance(node_list):
 	dist = 0
 	for i in range(len(node_list) - 1):
-		dist += np.square(x[node_list[i + 1]] - x[node_list[i]]) + np.square(y[node_list[i + 1]] - y[node_list[i]])
-	dist += np.square(x[node_list[len(node_list) - 1]] - x[node_list[0]]) + np.square(y[node_list[len(node_list) - 1]] - y[node_list[0]])
+		dist += math.sqrt(math.pow(x[node_list[i + 1]] - x[node_list[i]], 2) + math.pow(y[node_list[i + 1]] - y[node_list[i]], 2))
+	dist += math.sqrt(math.pow(x[node_list[len(node_list) - 1]] - x[node_list[0]], 2) + math.pow(y[node_list[len(node_list) - 1]] - y[node_list[0]], 2))
 	return dist
 
 # tournament_selection function proceeds tournament selection among 20 individuals
@@ -73,20 +73,35 @@ def longest_common(list1, list2):
 	lcs = []
 	index = 0
 	for i in range(len(list1)):
-		for j in range(len(list2)):
-			if list1[i] == list2[j]:
-				sub_lcs = []
-				iteration_no = np.minimum(len(list1) - i, len(list2) - j)
-				for k in range(iteration_no):
-					if list1[i + k] == list2[j + k]:
-						sub_lcs.append(list1[i + k])
-					else:
-						break
-				if len(sub_lcs) > len(lcs):
-					index = i
-					lcs.clear()
-					for elem in sub_lcs:
-						lcs.append(elem)
+		list2_index = list2.index(list1[i])
+		count = 0
+		sub_lcs = []
+		iteration_no = min(len(list2) - list2_index, len(list1) - i)
+		for j in range(iteration_no):
+			if list1[i + j] == list2[list2_index + j]:
+				sub_lcs.append(list1[i + j])
+			else:
+				break
+		if len(sub_lcs) > len(lcs):
+			index = i
+			lcs.clear()
+			for elem in sub_lcs:
+				lcs.append(elem)
+
+		#for j in range(len(list2)):
+		#	if list1[i] == list2[j]:
+		#		sub_lcs = []
+		#		iteration_no = min(len(list1) - i, len(list2) - j)
+		#		for k in range(iteration_no):
+		#			if list1[i + k] == list2[j + k]:
+		#				sub_lcs.append(list1[i + k])
+		#			else:
+		#				break
+		#		if len(sub_lcs) > len(lcs):
+		#			index = i
+		#			lcs.clear()
+		#			for elem in sub_lcs:
+		#				lcs.append(elem)
 	return (lcs, index)
 
 def elitism(list1, list2):
@@ -107,42 +122,90 @@ def diff(list1, list2):
 def crossover(ind1, ind2):
 	global node
 
+	'''
 	lcs, start_index = longest_common(ind1, ind2)
 	end_index = start_index + len(lcs) - 1	
 
 	rand1 = 0
 	if start_index != 0:
-		rand1 = random.randint(0, start_index)
+		rand1 = random.randint(0, start_index - 1)
 	else:
-		rand1 = random.randint(end_index + 1, len(ind1))
-	rand2 = random.randint(np.maximum(rand1, end_index), len(ind1))
+		if end_index != node - 1:
+			rand1 = random.randint(end_index + 1, len(ind1) - 1)
+	max_val = max(rand1, end_index)
+	if max_val == len(ind1) - 1:
+		rand2 = len(ind1) - 1
+	else:
+		rand2 = random.randint(max(rand1, end_index), len(ind1) - 1)
+
+	remain_ind1 = []
+	if rand2 == len(ind1) - 1:
+		remain_ind1 = ind1[min(start_index, rand1) : ]
+	else:
+		remain_ind1 = ind1[min(start_index, rand1) : rand2 + 1]
+	remain_ind2 = diff(ind2, remain_ind1)
+	count = 0
+	'''
+
+	rand1 = random.randint(0, len(ind1) - 1)
+	rand2 = random.randint(0, len(ind1) - 1)
+
+	index1 = min(rand1, rand2)
+	index2 = max(rand1, rand2)
+
+	remain_ind1 = []
+	if index2 != node - 1:
+		remain_ind1 = ind1[index1 : index2 + 1]
+	else:
+		remain_ind1 = ind1[index1 : ]
+	remain_ind2 = diff(ind2, remain_ind1)
+	count = 0
 
 	answer = []
 	for i in range(node):
-		if start_index <= i and i <= end_index:
-			answer.append(ind1[i])
-		elif rand1 <= i and i <= rand2:
+		if index1 <= i and i <= index2:
 			answer.append(ind1[i])
 		else:
-			answer.append(ind2[i])
+			answer.append(remain_ind2[count])
+			count += 1
 	return answer
-	
+	'''
+	answer = []
+	for i in range(node):
+		if min(start_index, rand1) <= i and i <= rand2:
+			answer.append(ind1[i])
+		else:
+			answer.append(remain_ind2[count])
+			count += 1
+	return answer
+	'''
+def mutate(permutation):
+	rand = random.random()
+	if rand < (1 / math.sqrt(node)):
+		rand1 = random.randint(0, node - 1)
+		rand2 = random.randint(0, node - 1)
+		while rand2 == rand1:
+			rand2 = random.randint(0, node - 1)
+		permutation[rand1], permutation[rand2] = permutation[rand2], permutation[rand1]
+	return permutation
+
 population = []
 child = []
 for i in range(20):
 	ts = tournament_selection()
 	population.append(ts)
 	print(ts.dist)
-for k in range(200):
+for k in range(500):
 	print("hello")
 	for i in range(19):
 		child_permute = crossover(population[i].permute, population[i + 1].permute)
+		child_permute = mutate(child_permute)
 		child_ind = Permutation(child_permute, calculate_distance(child_permute))
 		child.append(child_ind)
 		print(child_ind.dist)
 	child_permute = crossover(population[0].permute, population[19].permute)
+	child_permute = mutate(child_permute)
 	child_ind = Permutation(child_permute, calculate_distance(child_permute))
 	child.append(child_ind)
 	print(child_ind.dist)
 	population = elitism(population, child)
-
