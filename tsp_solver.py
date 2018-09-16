@@ -88,20 +88,6 @@ def longest_common(list1, list2):
 			for elem in sub_lcs:
 				lcs.append(elem)
 
-		#for j in range(len(list2)):
-		#	if list1[i] == list2[j]:
-		#		sub_lcs = []
-		#		iteration_no = min(len(list1) - i, len(list2) - j)
-		#		for k in range(iteration_no):
-		#			if list1[i + k] == list2[j + k]:
-		#				sub_lcs.append(list1[i + k])
-		#			else:
-		#				break
-		#		if len(sub_lcs) > len(lcs):
-		#			index = i
-		#			lcs.clear()
-		#			for elem in sub_lcs:
-		#				lcs.append(elem)
 	return (lcs, index)
 
 def elitism(list1, list2):
@@ -111,21 +97,53 @@ def elitism(list1, list2):
 	for i in list2:
 		result.append(i)
 	result.sort(key = lambda x: x.dist)
-	return result[20: ]
+	return result[0:100]
 
 # diff function returns a list who is in list 1 but not in list2
 def diff(list1, list2):
 	set2 = set(list2)
 	return [i for i in list1 if i not in list2]
 
+def change_start(start_val, target_list):
+	global node
+	index = target_list.index(start_val)
+	result = []
+	for i in range(node):
+		result.append(target_list[(index + i) % node])
+	return result
+
 # crossover function proceeds crossover between two individuals and returns a new child
 def crossover(ind1, ind2):
 	global node
 
-	'''
 	lcs, start_index = longest_common(ind1, ind2)
 	end_index = start_index + len(lcs) - 1	
 
+	result = []
+
+	change_ind1 = ind1
+	change_ind2 = ind2
+
+	if len(lcs) > 0:
+		change_ind1 = change_start(lcs[0], ind1)
+		change_ind2 = change_start(lcs[0], ind2)
+
+	change_ind1 = diff(change_ind1, lcs)
+	change_ind2 = diff(change_ind2, lcs)
+	rand = random.randint(0, len(change_ind1))
+	change_ind1 = change_ind1[0 : rand]
+	change_ind2 = diff(change_ind2, change_ind1)
+
+	for i in range(node):
+		if i < len(lcs):
+			result.append(lcs[i])
+		elif i < len(lcs) + rand:
+			result.append(change_ind1[i - len(lcs)])
+		else:
+			result.append(change_ind2[i - len(lcs) - rand])
+	return result
+		
+	'''
 	rand1 = 0
 	if start_index != 0:
 		rand1 = random.randint(0, start_index - 1)
@@ -145,8 +163,17 @@ def crossover(ind1, ind2):
 		remain_ind1 = ind1[min(start_index, rand1) : rand2 + 1]
 	remain_ind2 = diff(ind2, remain_ind1)
 	count = 0
-	'''
 
+	answer = []
+	for i in range(node):
+		if min(start_index, rand1) <= i and i <= rand2:
+			answer.append(ind1[i])
+		else:
+			answer.append(remain_ind2[count])
+			count += 1
+	return answer
+	'''
+	'''
 	rand1 = random.randint(0, len(ind1) - 1)
 	rand2 = random.randint(0, len(ind1) - 1)
 
@@ -170,15 +197,7 @@ def crossover(ind1, ind2):
 			count += 1
 	return answer
 	'''
-	answer = []
-	for i in range(node):
-		if min(start_index, rand1) <= i and i <= rand2:
-			answer.append(ind1[i])
-		else:
-			answer.append(remain_ind2[count])
-			count += 1
-	return answer
-	'''
+
 def mutate(permutation):
 	rand = random.random()
 	if rand < (1 / math.sqrt(node)):
@@ -191,21 +210,23 @@ def mutate(permutation):
 
 population = []
 child = []
-for i in range(20):
+for i in range(100):
 	ts = tournament_selection()
 	population.append(ts)
 	print(ts.dist)
-for k in range(500):
+for k in range(1000):
 	print("hello")
-	for i in range(19):
+	child = []
+	for i in range(99):
 		child_permute = crossover(population[i].permute, population[i + 1].permute)
 		child_permute = mutate(child_permute)
 		child_ind = Permutation(child_permute, calculate_distance(child_permute))
-		child.append(child_ind)
 		print(child_ind.dist)
-	child_permute = crossover(population[0].permute, population[19].permute)
+		child.append(child_ind)
+	child_permute = crossover(population[99].permute, population[0].permute)
 	child_permute = mutate(child_permute)
 	child_ind = Permutation(child_permute, calculate_distance(child_permute))
-	child.append(child_ind)
 	print(child_ind.dist)
+	child.append(child_ind)
 	population = elitism(population, child)
+
