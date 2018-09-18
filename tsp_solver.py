@@ -1,6 +1,7 @@
 import sys
 import random
 import math
+import csv
 
 # x is a list which contains the values of x coordinates
 x = []
@@ -200,6 +201,17 @@ def main():
 
 	return min_val
 
-min_val = main()
-print(min_val.permute)
-print(min_val.dist)
+def write_on_csv():
+	min_val = main()
+	min_list = min_val.permute
+	print(min_val.dist)
+	write_list = []
+	for i in min_list:
+		list_in = [i + 1]
+		write_list.append(list_in)
+	solution = open('solution.csv', 'w')
+	with solution:
+		writer = csv.writer(solution)
+		writer.writerows(write_list)
+
+write_on_csv()
