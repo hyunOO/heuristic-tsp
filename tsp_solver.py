@@ -11,6 +11,15 @@ node = 0
 # point_list is a list of Point
 point_list = []
 
+#tournament is how many sample populations will be participate on tournament selection
+tournament = 20
+# population is a number of parents population
+population = 100
+# iteration is how many iteraions will be
+iteration = 1000
+# mutate is a ratio of mutation
+mutate = 0.1
+
 filename = sys.argv[1]
 file = open(filename, "r")
 
@@ -70,6 +79,7 @@ def calculate_distance(node_list):
 # tournament_selection function proceeds tournament selection among 20 individuals
 def tournament_selection():
 	global node
+
 	ran_individual = []
 	for i in range(20):
 		ran_individual.append(random_permutation(node))
@@ -83,13 +93,15 @@ def tournament_selection():
 	return Permutation(ran_individual[index], dist)
 
 def ellitism(list1, list2):
+	global population
+
 	result = []
 	for i in list1:
 		result.append(i)
 	for i in list2:
 		result.append(i)
 	result.sort(key = lambda x: x.dist)
-	return result[0:100]
+	return result[0 : population]
 
 # diff function returns a list who is in list 1 but not in list2
 def diff(list1, list2):
@@ -153,25 +165,41 @@ def mutate(permutation):
 		permutation[rand1], permutation[rand2] = permutation[rand2], permutation[rand1]
 	return permutation
 
-population = []
-child = []
-for i in range(100):
-	ts = tournament_selection()
-	population.append(ts)
-	print(ts.dist)
-for k in range(1000):
-	print("hello")
-	child = []
-	for i in range(99):
-		child_permute = crossover(population[i].permute, population[i + 1].permute)
-		child_permute = mutate(child_permute)
-		child_ind = Permutation(child_permute, calculate_distance(child_permute))
-		print(child_ind.dist)
-		child.append(child_ind)
-	child_permute = crossover(population[99].permute, population[0].permute)
-	child_permute = mutate(child_permute)
-	child_ind = Permutation(child_permute, calculate_distance(child_permute))
-	print(child_ind.dist)
-	child.append(child_ind)
-	population = ellitism(population, child)
 
+def min_among_population(population_list):
+	min_val = population_list[0]
+	for i in range(len(population_list)):
+		if min_val.dist < population_list[i].dist:
+			min_val = population_list[i]
+	return min_val
+
+def crossover_and_mutate(permute1, permute2):
+	child_permute = crossover(permute1, permute2)
+	child_permute = mutate(child_permute)
+	child = Permutation(child_permute, calculate_distance(child_permute))
+	return child
+
+def main():
+	global population
+	global iteration
+
+	population_list = []
+	children_list = []
+
+	for i in range(population):
+		ts = tournament_selection()
+		population_list.append(ts)
+
+	for j in range(iteration):
+		child = []
+		min_val = min_among_population(population_list)
+		for i in range(population - 1):
+			child.append(crossover_and_mutate(population_list[i].permute, population_list[i + 1].permute))
+		child.append(crossover_and_mutate(population_list[population - 1].permute, population_list[0].permute))
+		population_list = ellitism(population_list, child)
+
+	return min_val
+
+min_val = main()
+print(min_val.permute)
+print(min_val.dist)
