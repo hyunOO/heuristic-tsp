@@ -8,6 +8,8 @@ x = []
 y = []
 # node is a total number of nodes
 node = 0
+# point_list is a list of Point
+point_list = []
 
 filename = sys.argv[1]
 file = open(filename, "r")
@@ -33,10 +35,22 @@ while True:
 				pass
 			count += 1
 
+class Point:
+	def __init__(self, number, x, y):
+		self.number = number
+		self.x = x
+		self.y = y
+	def dist(self, point1):
+		return math.sqrt(math.pow(self.x - point1.x, 2) + math.pow(self.y - point1.y, 2))
+
 class Permutation:
 	def __init__(self, permute, dist):
 		self.permute = permute
 		self.dist = dist
+
+for i in range(node):
+	point = Point(i, x[i], y[i])
+	point_list.append(point)
 
 # random_permutation function returns a randomly generated permutation from 1 to integer value node
 def random_permutation(node):
@@ -47,10 +61,10 @@ def random_permutation(node):
 # calcuate_distance function takes a role of fitness function
 # However, I will use this function for comparing among individuals
 def calculate_distance(node_list):
-	dist = 0
+	global node
+	dist = point_list[node_list[node - 1]].dist(point_list[node_list[0]])
 	for i in range(len(node_list) - 1):
-		dist += math.sqrt(math.pow(x[node_list[i + 1]] - x[node_list[i]], 2) + math.pow(y[node_list[i + 1]] - y[node_list[i]], 2))
-	dist += math.sqrt(math.pow(x[node_list[len(node_list) - 1]] - x[node_list[0]], 2) + math.pow(y[node_list[len(node_list) - 1]] - y[node_list[0]], 2))
+		dist += point_list[node_list[i]].dist(point_list[node_list[i + 1]])
 	return dist
 
 # tournament_selection function proceeds tournament selection among 20 individuals
@@ -68,29 +82,7 @@ def tournament_selection():
 			index = i + 1
 	return Permutation(ran_individual[index], dist)
 
-# longest_common function returns the longest common consecutive sequences between two lists
-def longest_common(list1, list2):
-	lcs = []
-	index = 0
-	for i in range(len(list1)):
-		list2_index = list2.index(list1[i])
-		count = 0
-		sub_lcs = []
-		iteration_no = min(len(list2) - list2_index, len(list1) - i)
-		for j in range(iteration_no):
-			if list1[i + j] == list2[list2_index + j]:
-				sub_lcs.append(list1[i + j])
-			else:
-				break
-		if len(sub_lcs) > len(lcs):
-			index = i
-			lcs.clear()
-			for elem in sub_lcs:
-				lcs.append(elem)
-
-	return (lcs, index)
-
-def elitism(list1, list2):
+def ellitism(list1, list2):
 	result = []
 	for i in list1:
 		result.append(i)
@@ -101,7 +93,6 @@ def elitism(list1, list2):
 
 # diff function returns a list who is in list 1 but not in list2
 def diff(list1, list2):
-	set2 = set(list2)
 	return [i for i in list1 if i not in list2]
 
 def change_start(start_val, target_list):
@@ -116,87 +107,41 @@ def change_start(start_val, target_list):
 def crossover(ind1, ind2):
 	global node
 
-	lcs, start_index = longest_common(ind1, ind2)
-	end_index = start_index + len(lcs) - 1	
-
 	result = []
 
-	change_ind1 = ind1
-	change_ind2 = ind2
+	ran_val = random.randint(0, node - 1)
+	change_ind1 = change_start(ran_val, ind1)
+	change_ind2 = change_start(ran_val, ind2)
 
-	if len(lcs) > 0:
-		change_ind1 = change_start(lcs[0], ind1)
-		change_ind2 = change_start(lcs[0], ind2)
-
-	change_ind1 = diff(change_ind1, lcs)
-	change_ind2 = diff(change_ind2, lcs)
-	rand = random.randint(0, len(change_ind1))
-	change_ind1 = change_ind1[0 : rand]
-	change_ind2 = diff(change_ind2, change_ind1)
-
+	index = 0
 	for i in range(node):
-		if i < len(lcs):
-			result.append(lcs[i])
-		elif i < len(lcs) + rand:
-			result.append(change_ind1[i - len(lcs)])
-		else:
-			result.append(change_ind2[i - len(lcs) - rand])
+		if change_ind1[i] != change_ind2[i]:
+			index = i
+			break
+	
+	if index == node - 1:
+		return ind1
+
+	dist1 = point_list[change_ind1[index]].dist(point_list[change_ind1[index - 1]])
+	dist2 = point_list[change_ind2[index]].dist(point_list[change_ind2[index - 1]])
+
+	for i in range(index):
+		result.append(change_ind1[i])
+	if dist1 < dist2:
+		result.append(change_ind1[index])
+	else:
+		result.append(change_ind2[index])
+
+	remain_ind1 = diff(change_ind1, result)
+	ran_index = random.randint(0, len(remain_ind1) - 1)
+	for i in range(ran_index):
+		result.append(remain_ind1[i])
+	
+	remain_ind2 = diff(change_ind2, result)
+	for i in range(len(remain_ind2)):
+		result.append(remain_ind2[i])
+
 	return result
-		
-	'''
-	rand1 = 0
-	if start_index != 0:
-		rand1 = random.randint(0, start_index - 1)
-	else:
-		if end_index != node - 1:
-			rand1 = random.randint(end_index + 1, len(ind1) - 1)
-	max_val = max(rand1, end_index)
-	if max_val == len(ind1) - 1:
-		rand2 = len(ind1) - 1
-	else:
-		rand2 = random.randint(max(rand1, end_index), len(ind1) - 1)
-
-	remain_ind1 = []
-	if rand2 == len(ind1) - 1:
-		remain_ind1 = ind1[min(start_index, rand1) : ]
-	else:
-		remain_ind1 = ind1[min(start_index, rand1) : rand2 + 1]
-	remain_ind2 = diff(ind2, remain_ind1)
-	count = 0
-
-	answer = []
-	for i in range(node):
-		if min(start_index, rand1) <= i and i <= rand2:
-			answer.append(ind1[i])
-		else:
-			answer.append(remain_ind2[count])
-			count += 1
-	return answer
-	'''
-	'''
-	rand1 = random.randint(0, len(ind1) - 1)
-	rand2 = random.randint(0, len(ind1) - 1)
-
-	index1 = min(rand1, rand2)
-	index2 = max(rand1, rand2)
-
-	remain_ind1 = []
-	if index2 != node - 1:
-		remain_ind1 = ind1[index1 : index2 + 1]
-	else:
-		remain_ind1 = ind1[index1 : ]
-	remain_ind2 = diff(ind2, remain_ind1)
-	count = 0
-
-	answer = []
-	for i in range(node):
-		if index1 <= i and i <= index2:
-			answer.append(ind1[i])
-		else:
-			answer.append(remain_ind2[count])
-			count += 1
-	return answer
-	'''
 
 def mutate(permutation):
 	rand = random.random()
@@ -228,5 +173,5 @@ for k in range(1000):
 	child_ind = Permutation(child_permute, calculate_distance(child_permute))
 	print(child_ind.dist)
 	child.append(child_ind)
-	population = elitism(population, child)
+	population = ellitism(population, child)
 
