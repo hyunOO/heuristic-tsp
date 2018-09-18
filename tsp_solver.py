@@ -15,9 +15,9 @@ point_list = []
 #tournament is how many sample populations will be participate on tournament selection
 tournament = 20
 # population is a number of parents population
-population = 100
+population = 20
 # iteration is how many iteraions will be
-iteration = 1000
+iteration = 30
 # mutate is a ratio of mutation
 mutate = 0.1
 
@@ -53,6 +53,36 @@ class Point:
 	def dist(self, point1):
 		return math.sqrt(math.pow(self.x - point1.x, 2) + math.pow(self.y - point1.y, 2))
 
+class PointDistance:
+	def __init__(self, number, dist):
+		self.number = number
+		self.dist = dist
+
+class Node:
+	def __init__(self, point, parent, child_list):
+		self.point = point
+		self.parent = parent
+		self.child_list = child_list
+	def append_child(self, child):
+		self.child_list.append(child)
+
+class Mst:
+	def __init__(self, root):
+		self.root = root
+	def preorder(self):
+		queue = [self.root]
+		answer = []
+		while len(queue) > 0:
+			present = queue.pop()
+			answer.append(present.point.number)
+			child_present = present.child_list
+			reversed_child = []
+			for i in range(len(child_present)):
+				reversed_child.append(child_present[len(child_present) - 1 - i])
+			for elem in reversed_child:
+				queue.append(elem)
+		return answer
+
 class Permutation:
 	def __init__(self, permute, dist):
 		self.permute = permute
@@ -61,6 +91,45 @@ class Permutation:
 for i in range(node):
 	point = Point(i, x[i], y[i])
 	point_list.append(point)
+
+def prims():
+	global node
+
+	start = random.randint(0, node - 1)
+	node_list = [i for i in range(node)]
+	start_node = Node(point_list[start], None, [])
+	node_list[start] = start_node
+	mst = Mst(start_node)
+
+	in_number_list = [start]
+	out_number_list = [i for i in range (node) if i != start]
+
+	dist_list = []
+	for i in range(node):
+		dist_list.append(PointDistance(start, point_list[start].dist(point_list[i])))
+	
+	while len(in_number_list) < node:
+		min_dist = sys.float_info.max
+		parent_number = 0
+		next_number = 0
+		for i in out_number_list:
+			current_dist = dist_list[i].dist
+			if current_dist < min_dist:
+				parent_number = dist_list[i].number
+				next_number = i
+				min_dist = current_dist
+		parent_node = node_list[parent_number]
+		next_node = Node(point_list[next_number], parent_node, [])
+		node_list[next_number] = next_node
+		parent_node.append_child(next_node)
+		in_number_list.append(next_number)
+		out_number_list.remove(next_number)
+		for i in out_number_list:
+			dist = point_list[next_number].dist(point_list[i])
+			if dist < dist_list[i].dist:
+				dist_list[i] = PointDistance(next_number, dist)	
+
+	return mst
 
 # random_permutation function returns a randomly generated permutation from 1 to integer value node
 def random_permutation(node):
@@ -80,7 +149,11 @@ def calculate_distance(node_list):
 # tournament_selection function proceeds tournament selection among 20 individuals
 def tournament_selection():
 	global node
+	
+	prims_permute = prims().preorder()
+	return Permutation(prims_permute, calculate_distance(prims_permute))
 
+'''
 	ran_individual = []
 	for i in range(20):
 		ran_individual.append(random_permutation(node))
@@ -92,6 +165,7 @@ def tournament_selection():
 			dist = new_dist
 			index = i + 1
 	return Permutation(ran_individual[index], dist)
+'''
 
 def ellitism(list1, list2):
 	global population
@@ -157,6 +231,8 @@ def crossover(ind1, ind2):
 	return result
 
 def mutate(permutation):
+	global node
+
 	rand = random.random()
 	if rand < (1 / math.sqrt(node)):
 		rand1 = random.randint(0, node - 1)
