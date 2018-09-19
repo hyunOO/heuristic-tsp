@@ -2,6 +2,7 @@ import sys
 import random
 import math
 import csv
+from optparse import OptionParser
 
 # x is a list which contains the values of x coordinates
 x = []
@@ -12,17 +13,24 @@ node = 0
 # point_list is a list of Point
 point_list = []
 
-#tournament is how many sample populations will be participate on tournament selection
-tournament = 20
-# population is a number of parents population
-population = 20
-# iteration is how many iteraions will be
-iteration = 30
-# mutate is a ratio of mutation
-mutate = 0.1
+parser = OptionParser()
+parser.add_option("-t", type="int", dest="tournament", default=20)
+parser.add_option("-p", type="int", dest="population", default=100)
+parser.add_option("-i", type="int", dest="iteration", default=1000)
+parser.add_option("-m", type="float", dest="mutation_prob", default=0)
 
 filename = sys.argv[1]
+(options, args) = parser.parse_args(sys.argv)
 file = open(filename, "r")
+
+#tournament is how many sample populations will be participate on tournament selection
+tournament = options.tournament
+# population is a number of parents population
+population = options.population
+# iteration is how many iteraions will be
+iteration = options.iteration
+# mutate is a ratio of mutation
+mutation_prob = options.mutation_prob
 
 for i in range(6):
 	file.readline()
@@ -44,6 +52,9 @@ while True:
 			else:
 				pass
 			count += 1
+
+if mutation_prob == 0:
+	mutation_prob = 1/math.sqrt(node)
 
 class Point:
 	def __init__(self, number, x, y):
@@ -131,11 +142,9 @@ def prims():
 
 	return mst
 
-# random_permutation function returns a randomly generated permutation from 1 to integer value node
+# random_permutation function returns a preorder traversal of MST
 def random_permutation(node):
-	x = [i for i in range(node)]
-	random.shuffle(x)
-	return x
+	return prims().preorder()
 
 # calcuate_distance function takes a role of fitness function
 # However, I will use this function for comparing among individuals
@@ -149,25 +158,21 @@ def calculate_distance(node_list):
 # tournament_selection function proceeds tournament selection among 20 individuals
 def tournament_selection():
 	global node
+	global tournament
 	
-	prims_permute = prims().preorder()
-	return Permutation(prims_permute, calculate_distance(prims_permute))
-
-'''
 	ran_individual = []
-	for i in range(20):
+	for i in range(tournament):
 		ran_individual.append(random_permutation(node))
 	index = 0
 	dist = calculate_distance(ran_individual[0])
-	for i in range(19):
+	for i in range(tournament - 1):
 		new_dist = calculate_distance(ran_individual[i + 1])
 		if new_dist < dist:
 			dist = new_dist
 			index = i + 1
 	return Permutation(ran_individual[index], dist)
-'''
 
-def ellitism(list1, list2):
+def gradual_replacement(list1, list2):
 	global population
 
 	result = []
@@ -232,9 +237,10 @@ def crossover(ind1, ind2):
 
 def mutate(permutation):
 	global node
+	global mutation_prob
 
 	rand = random.random()
-	if rand < (1 / math.sqrt(node)):
+	if rand < mutation_prob:
 		rand1 = random.randint(0, node - 1)
 		rand2 = random.randint(0, node - 1)
 		while rand2 == rand1:
@@ -273,7 +279,7 @@ def main():
 		for i in range(population - 1):
 			child.append(crossover_and_mutate(population_list[i].permute, population_list[i + 1].permute))
 		child.append(crossover_and_mutate(population_list[population - 1].permute, population_list[0].permute))
-		population_list = ellitism(population_list, child)
+		population_list = gradual_replacement(population_list, child)
 
 	return min_val
 
